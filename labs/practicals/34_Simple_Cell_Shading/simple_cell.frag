@@ -2,18 +2,18 @@
 
 // *********************************
 // Declare 1D sampler
-
 // *********************************
+uniform sampler1D tex1d;
 
 // Incoming texture coordinate
-layout(location = 0) in float tex_coord;
+layout ( location = 0 ) in float tex_coord;
 
 // Outgoing colour
-layout(location = 0) out vec4 colour;
+layout ( location = 0 ) out vec4 colour;
 
 void main() {
   // *********************************
   // Sample colour from 1D texture
-
+  colour = texture ( tex1d, tex_coord );
   // *********************************
 }

@@ -15,9 +15,9 @@ double cursor_y = 0.0;
 bool initialise() {
   // *********************************
   // Set input mode - hide the cursor
-
+  glfwSetInputMode ( renderer::get_window ( ), GLFW_CURSOR, GLFW_CURSOR_DISABLED );
   // Capture initial mouse position
-
+  glfwGetCursorPos ( renderer::get_window ( ), &cursor_x, &cursor_y );
   // *********************************
 
   return true;
@@ -88,47 +88,50 @@ bool update(float delta_time) {
   double current_y;
   // *********************************
   // Get the current cursor position
-
+  glfwGetCursorPos ( renderer::get_window ( ), &current_x, &current_y );
   // Calculate delta of cursor positions from last frame
-
-
+  auto delta_x = current_x - cursor_x;
+  auto delta_y = current_y - cursor_y;
   // Multiply deltas by ratios and delta_time - gets actual change in orientation
-
-
+  delta_x *= ratio_width;
+  delta_y *= ratio_height;
   // Rotate cameras by delta
   // x - delta_y
   // y - delta_x
   // z - 0
-
+  cam.rotate ( vec3 ( -delta_y, -delta_x, 0.f ) );
   // Use keyboard to rotate target_mesh - QE rotate on y-axis
-
-
-
-
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_Q)) {
+	  auto r = vec3(0, pi<float>(), 0) * delta_time;
+	  target_mesh.get_transform().rotate(r);
+	  cam.rotate(r);
+  }
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_E)) {
+	  auto r = vec3(0, -pi<float>(), 0) * delta_time;
+	  target_mesh.get_transform().rotate(r);
+	  cam.rotate(r);
+  }
   // Use keyboard to move the target_mesh - WSAD
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  auto cam_forward = target_mesh.get_transform().position - cam.get_position();
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_W)) {
+	  target_mesh.get_transform().translate(normalize(cam_forward * vec3(1, 0, 1)) * 5.f * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_S)) {
+	  target_mesh.get_transform().translate(normalize(-cam_forward * vec3(1, 0, 1)) * 5.f * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_A)) {
+	  target_mesh.get_transform().translate(normalize(cross(-cam_forward, cam.get_up()) * vec3(1, 0, 1)) * 5.f * delta_time);
+  }
+  if (glfwGetKey(renderer::get_window(), GLFW_KEY_D)) {
+	  target_mesh.get_transform().translate(normalize(cross(cam_forward, cam.get_up())* vec3(1, 0, 1)) * 5.f * delta_time);
+  }
   // Move camera - update target position and rotation
-
+  cam.move(target_mesh.get_transform().position, vec3(0));
   // Update the camera
-
+  cam.update(delta_time);
   // Update cursor pos
-
-
+  cursor_x = current_x;
+  cursor_y = current_y;
   // *********************************
   return true;
 }

@@ -1,4 +1,4 @@
-#include <glm\glm.hpp>
+#include <glm/glm.hpp>
 #include <graphics_framework.h>
 
 using namespace std;
@@ -17,9 +17,8 @@ bool load_content() {
   vector<vec3> positions{
       // *********************************
       // Add the position data for cube corners here (8 total)
-
-
-
+    vec3 ( 0, 0, 0 ), vec3 ( 0, 0, 1 ), vec3 ( 0, 1, 0 ), vec3 ( 0, 1, 1 ),
+    vec3 ( 1, 0, 0 ), vec3 ( 1, 0, 1 ), vec3 ( 1, 1, 0 ), vec3 ( 1, 1, 1 )
       // *********************************
   };
   // Colours
@@ -32,22 +31,22 @@ bool load_content() {
       // *********************************
       // Add index information here - 3 per triangle, 6 per face, 12 triangles
       // Front
-
+      1, 5, 3, 3, 5, 7,
       // Back
-
+      0, 2, 4, 4, 2, 6,
       // Right
-
+      4, 6, 5, 5, 6, 7,
       // Left
-
+      0, 1, 2, 2, 1, 3,
       // Top
-
+      7, 6, 3, 3, 6, 2,
       // Bottom
-
+      0, 4, 1, 1, 4, 5
       // *********************************
   };
   // Add to the geometry
-  geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
-  geom.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
+  geom.add_buffer(positions, POSITION_BUFFER);
+  geom.add_buffer(colours, COLOUR_BUFFER);
   // ****************************
   // Add index buffer to geometry
   // ****************************

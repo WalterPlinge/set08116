@@ -1,4 +1,4 @@
-#include <glm\glm.hpp>
+#include <glm/glm.hpp>
 #include <graphics_framework.h>
 
 using namespace std;
@@ -18,12 +18,12 @@ bool load_content() {
   // Colours
   vector<vec4> colours{vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 1.0f)};
   // Add to the geometry
-  geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
-  geom.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
+  geom.add_buffer(positions, POSITION_BUFFER);
+  geom.add_buffer(colours, COLOUR_BUFFER);
 
   // *********************************
   // Create mesh object here
-
+  m = mesh ( geom );
   // *********************************
 
   // Load in shaders
@@ -58,7 +58,7 @@ bool render() {
   glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
   // *********************************
   // Render the mesh here
-
+  renderer::render ( m );
   // *********************************
   return true;
 }

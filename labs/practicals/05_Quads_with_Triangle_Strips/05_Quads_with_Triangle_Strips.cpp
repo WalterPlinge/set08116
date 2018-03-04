@@ -1,4 +1,4 @@
-#include <glm\glm.hpp>
+#include <glm/glm.hpp>
 #include <graphics_framework.h>
 
 using namespace std;
@@ -9,67 +9,73 @@ geometry geom;
 effect eff;
 target_camera cam;
 
-bool load_content() {
+bool load_content ( )
+{
   // *********************************
   // Set geometry type to triangle strip
-
+  geom.set_type ( GL_TRIANGLE_STRIP );
   // *********************************
   // Positions
+  auto s = 4;
+  vec3 p1 ( 0, 0, 0 ), p2 ( s, 0, 0 ), p3 ( 0, s, 0 ), p4 ( s, s, 0 ), p5 ( 0, 0, s ), p6 ( s, 0, s ), p7 ( 0, s, s ), p8 ( s, s, s );
   vector<vec3> positions{
-      // *********************************
-      // Add the position data for two triangles here
-
-      // *********************************
+    // *********************************
+    // Add the position data for two triangles here
+    p2, p1, p4, p3, p7, p1, p5, p6, p7, p8, p4, p6, p2, p1
+    // *********************************
   };
   // Colours
-  vector<vec4> colours{vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 1.0f),
-                       vec4(1.0f, 0.0f, 0.0f, 1.0f)};
+  vec4 r ( 1, 0, 0, 1 ), g ( 0, 1, 0, 1 ), b ( 0, 0, 1, 1 );
+  vector<vec4> colours{ b,r,g,b,g,r,b,g,g,r,g,g,b,r };
   // Add to the geometry
-  geom.add_buffer(positions, BUFFER_INDEXES::POSITION_BUFFER);
-  geom.add_buffer(colours, BUFFER_INDEXES::COLOUR_BUFFER);
+  geom.add_buffer ( positions, POSITION_BUFFER );
+  geom.add_buffer ( colours, COLOUR_BUFFER );
 
   // Load in shaders
-  eff.add_shader("shaders/basic.vert", GL_VERTEX_SHADER);
-  eff.add_shader("shaders/basic.frag", GL_FRAGMENT_SHADER);
+  eff.add_shader ( "shaders/basic.vert", GL_VERTEX_SHADER );
+  eff.add_shader ( "shaders/basic.frag", GL_FRAGMENT_SHADER );
   // Build effect
-  eff.build();
+  eff.build ( );
 
   // Set camera properties
-  cam.set_position(vec3(10.0f, 10.0f, 10.0f));
-  cam.set_target(vec3(0.0f, 0.0f, 0.0f));
-  auto aspect = static_cast<float>(renderer::get_screen_width()) / static_cast<float>(renderer::get_screen_height());
-  cam.set_projection(quarter_pi<float>(), aspect, 2.414f, 1000.0f);
+  cam.set_position ( vec3 ( 10.0f, 10.0f, 10.0f ) );
+  cam.set_target ( vec3 ( 0.0f, 0.0f, 0.0f ) );
+  auto aspect = static_cast<float>( renderer::get_screen_width ( ) ) / static_cast<float>( renderer::get_screen_height ( ) );
+  cam.set_projection ( quarter_pi<float> ( ), aspect, 2.414f, 1000.0f );
   return true;
 }
 
-bool update(float delta_time) {
+bool update ( float delta_time )
+{
   // Update the camera
-  cam.update(delta_time);
+  cam.update ( delta_time );
   return true;
 }
 
-bool render() {
+bool render ( )
+{
   // Bind effect
-  renderer::bind(eff);
+  renderer::bind ( eff );
   // Create MVP matrix
-  mat4 M(1.0f);
-  auto V = cam.get_view();
-  auto P = cam.get_projection();
+  mat4 M ( 1.0f );
+  auto V = cam.get_view ( );
+  auto P = cam.get_projection ( );
   auto MVP = P * V * M;
   // Set MVP matrix uniform
-  glUniformMatrix4fv(eff.get_uniform_location("MVP"), 1, GL_FALSE, value_ptr(MVP));
+  glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( MVP ) );
   // Render geometry
-  renderer::render(geom);
+  renderer::render ( geom );
   return true;
 }
 
-void main() {
+void main ( )
+{
   // Create application
-  app application("05_Quads_with_Triangle_Strips");
+  app application ( "05_Quads_with_Triangle_Strips" );
   // Set load content, update and render methods
-  application.set_load_content(load_content);
-  application.set_update(update);
-  application.set_render(render);
+  application.set_load_content ( load_content );
+  application.set_update ( update );
+  application.set_render ( render );
   // Run application
-  application.run();
+  application.run ( );
 }

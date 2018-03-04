@@ -15,9 +15,9 @@ double cursor_y = 0.0;
 bool initialise() {
   // *********************************
   // Set input mode - hide the cursor
-
+	glfwSetInputMode ( renderer::get_window ( ), GLFW_CURSOR, GLFW_CURSOR_DISABLED );
   // Capture initial mouse position
-
+  glfwGetCursorPos ( renderer::get_window ( ), &cursor_x, &cursor_y );
   // *********************************
   return true;
 }
@@ -44,13 +44,13 @@ bool load_content() {
   meshes["pyramid"].get_transform().translate(vec3(-10.0f, 7.5f, -30.0f));
   meshes["disk"].get_transform().scale = vec3(3.0f, 1.0f, 3.0f);
   meshes["disk"].get_transform().translate(vec3(-10.0f, 11.5f, -30.0f));
-  meshes["disk"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
+  meshes["disk"].get_transform().rotate(vec3(quarter_pi<float>(), 0.0f, 0.0f));
   meshes["cylinder"].get_transform().scale = vec3(5.0f, 5.0f, 5.0f);
   meshes["cylinder"].get_transform().translate(vec3(-25.0f, 2.5f, -25.0f));
   meshes["sphere"].get_transform().scale = vec3(2.5f, 2.5f, 2.5f);
   meshes["sphere"].get_transform().translate(vec3(-25.0f, 10.0f, -25.0f));
   meshes["torus"].get_transform().translate(vec3(-25.0f, 10.0f, -25.0f));
-  meshes["torus"].get_transform().rotate(vec3(half_pi<float>(), 0.0f, 0.0f));
+  meshes["torus"].get_transform().rotate(vec3(quarter_pi<float>(), 0.0f, 0.0f));
 
   // Load texture
   tex = texture("textures/checker.png");
@@ -81,38 +81,38 @@ bool update(float delta_time) {
   double current_y;
   // *********************************
   // Get the current cursor position
-
+  glfwGetCursorPos ( renderer::get_window ( ), &current_x, &current_y );
   // Calculate delta of cursor positions from last frame
-
-
+  auto delta_x = current_x - cursor_x;
+  auto delta_y = current_y - cursor_y;
   // Multiply deltas by ratios - gets actual change in orientation
-
-
+  delta_x *= ratio_width;
+  delta_y *= ratio_height;
   // Rotate cameras by delta
   // delta_y - x-axis rotation
   // delta_x - y-axis rotation
-
+  cam.rotate ( cam.get_up ( ).y > 0 ? delta_x : -delta_x, -delta_y );
   // Use keyboard to move the camera - WSAD
-
-
-
-
-
-
-
-
-
-
-
-
-
+  if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_W ) )
+    cam.set_position ( cam.get_position ( ) +  cam.get_forward ( ) * 5.f * delta_time );
+  if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_S ) )
+    cam.set_position ( cam.get_position ( ) - cam.get_forward ( ) * 5.f * delta_time );
+  if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_A ) )
+    cam.set_position ( cam.get_position ( ) - cross ( cam.get_forward ( ), cam.get_up ( ) ) * 5.f * delta_time );
+  if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_D ) )
+    cam.set_position ( cam.get_position ( ) + cross ( cam.get_forward ( ), cam.get_up ( ) ) * 5.f * delta_time );
+  if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_SPACE ) )
+    cam.set_position ( cam.get_position ( ) + cam.get_up ( ) * 5.f * delta_time );
+  if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_LEFT_SHIFT ) )
+    cam.set_position ( cam.get_position ( ) - cam.get_up ( ) * 5.f * delta_time );
+  
   // Move camera
-
+  
   // Update the camera
-
+  cam.update ( delta_time );
   // Update cursor pos
-
-
+  cursor_x = current_x;
+  cursor_y = current_y;
   // *********************************
   return true;
 }
