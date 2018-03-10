@@ -105,9 +105,9 @@ bool update(float delta_time) {
     cam.set_position ( cam.get_position ( ) + cam.get_up ( ) * 5.f * delta_time );
   if ( glfwGetKey ( renderer::get_window ( ), GLFW_KEY_LEFT_SHIFT ) )
     cam.set_position ( cam.get_position ( ) - cam.get_up ( ) * 5.f * delta_time );
-  
+
   // Move camera
-  
+
   // Update the camera
   cam.update ( delta_time );
   // Update cursor pos
