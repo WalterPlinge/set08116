@@ -1,10 +1,6 @@
 #version 440
 
-// This shader requires spot.frag, part_shadow.frag
-
 // Spot light data
-#ifndef SPOT_LIGHT
-#define SPOT_LIGHT
 struct spot_light {
   vec4 light_colour;
   vec3 position;
@@ -14,34 +10,23 @@ struct spot_light {
   float quadratic;
   float power;
 };
-#endif
 
-// A material structure
-#ifndef MATERIAL
-#define MATERIAL
+// Material data
 struct material {
   vec4 emissive;
   vec4 diffuse_reflection;
   vec4 specular_reflection;
   float shininess;
 };
-#endif
-
-// Forward declarations of used functions
-vec4 calculate_spot(in spot_light spot, in material mat, in vec3 position, in vec3 normal, in vec3 view_dir,
-                    in vec4 tex_colour);
-float calculate_shadow(in sampler2D shadow_map, in vec4 light_space_pos);
 
 // Spot light being used in the scene
 uniform spot_light spot;
 // Material of the object being rendered
 uniform material mat;
-// Position of the eye
+// Position of the eye (camera)
 uniform vec3 eye_pos;
 // Texture to sample from
 uniform sampler2D tex;
-// Shadow map to sample from
-uniform sampler2D shadow_map;
 
 // Incoming position
 layout(location = 0) in vec3 position;
@@ -49,18 +34,20 @@ layout(location = 0) in vec3 position;
 layout(location = 1) in vec3 normal;
 // Incoming texture coordinate
 layout(location = 2) in vec2 tex_coord;
-// Incoming light space position
-layout(location = 3) in vec4 light_space_pos;
 
 // Outgoing colour
 layout(location = 0) out vec4 colour;
 
-vec4 spot_calculation(in spot_light spot, in material mat, in vec3 position, in vec3 normal, in vec3 view_dir, in vec4 tex_colour) {
+void main() {
+  // *********************************
   // Calculate direction to the light
   vec3 direction = normalize ( spot.position - position );
 
   // Calculate distance to light
   float dist = length ( spot.position - position );
+
+  vec3 view_dir = position - eye_pos;
+  vec4 tex_colour = texture ( tex, tex_coord );
 
   // Calculate attenuation value
   float att = 1 / ( spot.constant + spot.linear * dist + spot.quadratic * dist * dist );
@@ -87,26 +74,6 @@ vec4 spot_calculation(in spot_light spot, in material mat, in vec3 position, in 
   vec4 primary = mat.emissive + diffuse;
 
   // Calculate final colour - remember alpha
-  vec4 return_colour = normalize ( primary * tex_colour + specular );
-  return_colour.a = 1;
-
-  // Return colour
-  return return_colour;
-}
-
-void main() {
-  // *********************************
-  // Calculate shade factor
-  float shade_factor = calculate_shadow ( shadow_map, light_space_pos );
-  // Calculate view direction, normalize it
-  vec3 view_dir = normalize ( position - eye_pos );
-  // Sample texture
-  vec4 tex_colour = texture ( tex, tex_coords );
-  // Calculate spot light
-  vec4 spot_colour = spot_calculation ( spot, mat, position, normal, view_dir, tex_colour );
-  // Scale colour by shade
-  colour += spot_colour * shade_factor;
-  //Ensure alpha is 1.0
+  colour = normalize ( primary * tex_colour + specular );
   colour.a = 1;
-  // *********************************
 }

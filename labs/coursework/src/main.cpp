@@ -16,9 +16,12 @@ map<string, mesh> meshes;
 map<string, effect> effects;
 map<string, texture> textures;
 map<string, material> materials;
+int use_normal_map = 0;
+int use_dissolve = 0;
 
 spot_light spotlight;
-point_light pointlight;
+vector<point_light> pointlights;
+shadow_map shadow;
 
 bool initialise ( )
 {
@@ -42,24 +45,30 @@ bool load_content ( )
 	materials["basic"].set_shininess ( 25 );
 	materials["basic"].set_specular ( vec4 ( 1, 1, 1, 1 ) );
 
+	textures["nm"] = texture ( "res/textures/flatnormalmap.jpg" );
 	textures["grass"] = texture ( "res/textures/grass.jpg" );
 	textures["smiley"] = texture ( "res/textures/smiley.png" );
 	textures["checker"] = texture ( "res/textures/checker.png" );
-	textures["check_1"] = texture ( "res/textures/check_1.png" );
-	textures["check_2"] = texture ( "res/textures/check_2.png" );
+	textures["brick"] = texture ( "res/textures/brick.jpg" );
+	textures["bricknm"] = texture ( "res/textures/brick_normalmap.jpg" );
+	textures["alpha"] = texture ( "res/textures/alpha_map.png" );
 
-	effects["basic_textured"].add_shader ( "res/shaders/shader.vert", GL_VERTEX_SHADER );
-	effects["basic_textured"].add_shader ( "res/shaders/shader.frag", GL_FRAGMENT_SHADER );
-	effects["basic_textured"].build ( );
+	effects["spot"].add_shader ( "res/shaders/spot.vert", GL_VERTEX_SHADER );
+	effects["spot"].add_shader ( "res/shaders/spot.frag", GL_FRAGMENT_SHADER );
+	effects["spot"].build ( );
 	effects["multi-light"].add_shader ( "res/shaders/multi-light.vert", GL_VERTEX_SHADER );
 	effects["multi-light"].add_shader ( "res/shaders/multi-light.frag", GL_FRAGMENT_SHADER );
 	effects["multi-light"].build ( );
 
+	shadow = shadow_map ( renderer::get_screen_width ( ), renderer::get_screen_height ( ) );
+
 	meshes["ground"] = mesh ( geometry_builder::create_disk ( 127, vec2 ( 64 ) ) );
 	meshes["ground"].set_material ( materials["basic"] );
+	meshes["ground"].get_material ( ).set_diffuse ( vec4 ( 1 / pi<float> ( ), 1 / half_pi<float> ( ), 1 / pi<float> ( ), 1 ) );
 	meshes["stadium"] = mesh ( geometry_builder::create_torus ( 64, 64, 8, 40 ) );
 	meshes["stadium"].set_material ( materials["basic"] );
-	meshes["freecam"] = mesh ( geometry_builder::create_sphere ( 64, 64 ) );
+	meshes["freecam"] = mesh ( geometry ( "res/models/teapot.obj" ) );
+	meshes["freecam"].get_transform ( ).scale = vec3 ( 0.01 );
 	meshes["freecam"].set_material ( materials["basic"] );
 
 	for ( auto a = 0; a < 32; ++a )
@@ -77,9 +86,14 @@ bool load_content ( )
 	}
 	cubes2[0].get_transform ( ).position = vec3 ( 0, 2, 0 );
 
-	pointlight.set_position ( vec3 ( 8 ) );
-	pointlight.set_light_colour ( vec4 ( 1, 0, 1, 1 ) );
-	pointlight.set_range ( 8 );
+	pointlights.insert ( pointlights.end ( ), point_light ( ) );
+	pointlights.insert ( pointlights.end ( ), point_light ( ) );
+	pointlights[0].set_position ( vec3 ( 8 ) );
+	pointlights[0].set_light_colour ( vec4 ( 1, 0, 1, 1 ) );
+	pointlights[0].set_range ( 8 );
+	pointlights[1].set_position ( vec3 ( 16, 8, -8 ) );
+	pointlights[1].set_light_colour ( vec4 ( 1, 1, 0, 1 ) );
+	pointlights[1].set_range ( 8 );
 
 	spotlight.set_position ( vec3 ( 2, 8, 2 ) );
 	spotlight.set_light_colour ( vec4 ( 0, 1, 1, 1 ) );
@@ -157,35 +171,135 @@ bool update ( float delta_time )
 
 	for ( auto a = 0; a < cubes.size ( ); ++a )
 	{
-		cubes[a].get_transform ( ).rotate ( vec3 ( 0, !a ? delta_time / 4 : 0, 0 ) );
+		cubes[a].get_transform ( ).rotate ( vec3 ( a ? -delta_time / 4 : 0, !a ? delta_time / 4 : 0, 0 ) );
 	}
 	for ( auto a = 0; a < cubes2.size ( ); ++a )
 	{
-		cubes2[a].get_transform ( ).rotate ( vec3 ( 0, !a ? delta_time / 2 : 0, 0 ) );
+		cubes2[a].get_transform ( ).rotate ( vec3 ( a ? delta_time / 2 : 0, !a ? delta_time / 2 : 0, 0 ) );
 	}
+
+	// Update the shadow map light_position from the spot light
+	shadow.light_position = spotlight.get_position ( );
+	// do the same for light_dir property
+	shadow.light_dir = spotlight.get_direction ( );
 
 	// Update the camera
 	return true;
 }
 
+void rendershadow () {
+	renderer::set_render_target ( shadow );
+	// Clear depth buffer bit
+	glClear ( GL_DEPTH_BUFFER_BIT );
+	// Set face cull mode to front
+	glCullFace ( GL_FRONT );
+
+	mat4 LightProjectionMat = perspective<float> ( 90.f, renderer::get_screen_aspect ( ), 0.1f, 1000.f );
+
+	auto eff = effects["spot"];
+
+	renderer::bind ( eff );
+
+	auto V = shadow.get_view ( );
+	auto PV = LightProjectionMat * V;
+	mesh mesh;
+	mat4 M;
+
+	auto eye = cam ? cam0.get_position ( ) : cam1.get_position ( );
+	glUniform3fv ( eff.get_uniform_location ( "eye_pos" ), 1, value_ptr ( eye ) );
+
+	mesh = meshes["ground"];
+	M = mesh.get_transform ( ).get_transform_matrix ( );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+	renderer::render ( mesh );
+
+	mesh = meshes["freecam"];
+	M = mesh.get_transform ( ).get_transform_matrix ( );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+	renderer::render ( mesh );
+
+	mesh = meshes["stadium"];
+	M = mesh.get_transform ( ).get_transform_matrix ( );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+	renderer::render ( mesh );
+
+	for ( auto a = 0; a < cubes.size ( ); ++a )
+	{
+		mesh = cubes[a];
+		M = mesh.get_transform ( ).get_transform_matrix ( );
+		for ( auto b = a; b > 0; --b )
+		{
+			M = cubes[b - 1].get_transform ( ).get_transform_matrix ( ) * M;
+		}
+		glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+		renderer::render ( mesh );
+	}
+
+	for ( auto a = 0; a < cubes2.size ( ); ++a )
+	{
+		mesh = cubes2[a];
+		M = mesh.get_transform ( ).get_transform_matrix ( );
+		for ( auto b = a; b > 0; --b )
+		{
+			M = cubes2[b - 1].get_transform ( ).get_transform_matrix ( ) * M;
+		}
+		glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+		renderer::render ( mesh );
+	}
+
+	renderer::set_render_target ( );
+	// Set face cull mode to back
+	glCullFace ( GL_BACK );
+}
+
 bool render ( )
 {
-	auto V = cam ? cam0.get_view ( ) : cam1.get_view ( );
+	rendershadow ( );
+
 	auto P = cam ? cam0.get_projection ( ) : cam1.get_projection ( );
+	auto V = cam ? cam0.get_view ( ) : cam1.get_view ( );
 	auto PV = P * V;
+	texture tex;
+	mesh mesh;
+	mat4 M;
+	mat3 N;
+
+	// viewmatrix from the shadow map
+	auto lV = shadow.get_view ( );
+	mat4 LightProjectionMat = perspective<float> ( 90.f, renderer::get_screen_aspect ( ), 0.1f, 1000.f );
+	// Multiply together with LightProjectionMat
+	auto lightPV = LightProjectionMat * lV;
 
 	auto eff = effects["multi-light"];
 	renderer::bind ( eff );
 	renderer::bind ( spotlight, "spot" );
-	renderer::bind ( pointlight, "point" );
+	renderer::bind ( pointlights, "points" );
 	renderer::bind ( materials["basic"], "mat" );
 
-	auto tex = textures["grass"];
+	auto eye = cam ? cam0.get_position ( ) : cam1.get_position ( );
+	glUniform3fv ( eff.get_uniform_location ( "eye_pos" ), 1, value_ptr ( eye ) );
+
+	renderer::bind ( shadow.buffer->get_depth ( ), 4 );
+	glUniform1i ( eff.get_uniform_location ( "shadow_map" ), 4 );
+
+
+	renderer::bind ( textures["bricknm"], 1 );
+	glUniform1i ( eff.get_uniform_location ( "nm_tex" ), 1 );
+	renderer::bind ( textures["alpha"], 2 );
+	glUniform1i ( eff.get_uniform_location ( "alpha_map" ), 2 );
+
+	use_normal_map = 0;
+	glUniform1i ( eff.get_uniform_location ( "use_normal_map" ), use_normal_map );
+	use_dissolve = 0;
+	glUniform1i ( eff.get_uniform_location ( "use_dissolve" ), use_dissolve );
+
+	tex = textures["grass"];
 	renderer::bind ( tex, 0 );
-	auto mesh = meshes["ground"];
-	auto M = mesh.get_transform ( ).get_transform_matrix ( );
-	auto N = mesh.get_transform ( ).get_normal_matrix ( );
+	mesh = meshes["ground"];
+	M = mesh.get_transform ( ).get_transform_matrix ( );
+	N = mesh.get_transform ( ).get_normal_matrix ( );
 	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "lightMVP" ), 1, GL_FALSE, value_ptr ( lightPV * M ) );
 	glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
 	glUniformMatrix4fv ( eff.get_uniform_location ( "M" ), 1, GL_FALSE, value_ptr ( M ) );
 	glUniformMatrix3fv ( eff.get_uniform_location ( "N" ), 1, GL_FALSE, value_ptr ( N ) );
@@ -193,28 +307,33 @@ bool render ( )
 
 	tex = textures["checker"];
 	renderer::bind ( tex, 0 );
-	mesh = meshes["stadium"];
-	M = mesh.get_transform ( ).get_transform_matrix ( );
-	N = mesh.get_transform ( ).get_normal_matrix ( );
-	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
-	glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
-	glUniformMatrix4fv ( eff.get_uniform_location ( "M" ), 1, GL_FALSE, value_ptr ( M ) );
-	glUniformMatrix3fv ( eff.get_uniform_location ( "N" ), 1, GL_FALSE, value_ptr ( N ) );
-	renderer::render ( mesh );
-
-	tex = textures["smiley"];
-	renderer::bind ( tex, 0 );
 	mesh = meshes["freecam"];
 	M = mesh.get_transform ( ).get_transform_matrix ( );
 	N = mesh.get_transform ( ).get_normal_matrix ( );
 	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "lightMVP" ), 1, GL_FALSE, value_ptr ( lightPV * M ) );
 	glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
 	glUniformMatrix4fv ( eff.get_uniform_location ( "M" ), 1, GL_FALSE, value_ptr ( M ) );
 	glUniformMatrix3fv ( eff.get_uniform_location ( "N" ), 1, GL_FALSE, value_ptr ( N ) );
 	renderer::render ( mesh );
 
-	tex = textures["check_1"];
+	use_normal_map = 1;
+	glUniform1i ( eff.get_uniform_location ( "use_normal_map" ), use_normal_map );
+	mesh = meshes["stadium"];
+	M = mesh.get_transform ( ).get_transform_matrix ( );
+	N = mesh.get_transform ( ).get_normal_matrix ( );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "lightMVP" ), 1, GL_FALSE, value_ptr ( lightPV * M ) );
+	glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
+	glUniformMatrix4fv ( eff.get_uniform_location ( "M" ), 1, GL_FALSE, value_ptr ( M ) );
+	glUniformMatrix3fv ( eff.get_uniform_location ( "N" ), 1, GL_FALSE, value_ptr ( N ) );
+	renderer::render ( mesh );
+
+	tex = textures["brick"];
 	renderer::bind ( tex, 0 );
+	glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
+	use_normal_map = 1;
+	glUniform1i ( eff.get_uniform_location ( "use_normal_map" ), use_normal_map );
 	for ( auto a = 0; a < cubes.size ( ); ++a )
 	{
 		mesh = cubes[a];
@@ -226,11 +345,14 @@ bool render ( )
 			N = cubes[b - 1].get_transform ( ).get_normal_matrix ( ) * N;
 		}
 		glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
-		glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
+		glUniformMatrix4fv ( eff.get_uniform_location ( "lightMVP" ), 1, GL_FALSE, value_ptr ( lightPV * M ) );
 		glUniformMatrix4fv ( eff.get_uniform_location ( "M" ), 1, GL_FALSE, value_ptr ( M ) );
 		glUniformMatrix3fv ( eff.get_uniform_location ( "N" ), 1, GL_FALSE, value_ptr ( N ) );
 		renderer::render ( mesh );
 	}
+
+	use_dissolve = 1;
+	glUniform1i ( eff.get_uniform_location ( "use_dissolve" ), use_dissolve );
 	for ( auto a = 0; a < cubes2.size ( ); ++a )
 	{
 		mesh = cubes2[a];
@@ -242,7 +364,7 @@ bool render ( )
 			N = cubes2[b - 1].get_transform ( ).get_normal_matrix ( ) * N;
 		}
 		glUniformMatrix4fv ( eff.get_uniform_location ( "MVP" ), 1, GL_FALSE, value_ptr ( PV * M ) );
-		glUniform1i ( eff.get_uniform_location ( "tex" ), 0 );
+		glUniformMatrix4fv ( eff.get_uniform_location ( "lightMVP" ), 1, GL_FALSE, value_ptr ( lightPV * M ) );
 		glUniformMatrix4fv ( eff.get_uniform_location ( "M" ), 1, GL_FALSE, value_ptr ( M ) );
 		glUniformMatrix3fv ( eff.get_uniform_location ( "N" ), 1, GL_FALSE, value_ptr ( N ) );
 		renderer::render ( mesh );

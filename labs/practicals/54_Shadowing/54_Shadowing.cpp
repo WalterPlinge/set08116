@@ -56,7 +56,7 @@ bool load_content() {
   spot.set_position(vec3(30.0f, 20.0f, 0.0f));
   spot.set_light_colour(vec4(1.0f, 1.0f, 1.0f, 1.0f));
   spot.set_direction(normalize(-spot.get_position()));
-  spot.set_range(500.0f);
+  spot.set_range(50.0f);
   spot.set_power(10.0f);
 
   // Load in shaders
@@ -176,29 +176,29 @@ bool render() {
     // *********************************
     // Set lightMVP uniform, using:
     //Model matrix from m
-
+		auto lM = m.get_transform ( ).get_transform_matrix ( );
     // viewmatrix from the shadow map
-
+		auto lV = shadow.get_view ( );
     // Multiply together with LightProjectionMat
-
+		auto lightMVP = LightProjectionMat * lV * lM;
     // Set uniform
-
+		glUniformMatrix4fv ( main_eff.get_uniform_location ( "lightMVP" ), 1, GL_FALSE, value_ptr ( lightMVP ) );
     // Bind material
-
+		renderer::bind ( m.get_material ( ), "mat" );
     // Bind spot light
-
+		renderer::bind ( spot, "spot" );
     // Bind texture
-
+		renderer::bind ( tex, 0 );
     // Set tex uniform
-
+		glUniform1i ( main_eff.get_uniform_location ( "tex" ), 0 );
     // Set eye position
-
+		glUniform3fv ( main_eff.get_uniform_location ( "eye_pos" ), 1, value_ptr ( cam.get_position ( ) ) );
     // Bind shadow map texture - use texture unit 1
-
+		renderer::bind ( shadow.buffer->get_depth(), 0 );
     // Set the shadow_map uniform
-
+		glUniform1i ( main_eff.get_uniform_location ( "shadow_map" ), 1 );
     // Render mesh
-
+		renderer::render ( m );
     // *********************************
   }
 

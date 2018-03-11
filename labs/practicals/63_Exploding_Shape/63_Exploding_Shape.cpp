@@ -81,7 +81,7 @@ bool render() {
   return true;
 }
 
-void main() {
+/*void main() {
   // Create application
   app application("63_Exploding_Shape");
   // Set load content, update and render methods
@@ -90,4 +90,4 @@ void main() {
   application.set_render(render);
   // Run application
   application.run();
-}
+}*/

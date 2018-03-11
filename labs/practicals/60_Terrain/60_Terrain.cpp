@@ -44,7 +44,7 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
     for (int z = 0; z < height_map.get_height(); ++z) {
       // *********************************
       // Calculate z position of point
-
+			point.z = -( depth / 2.f ) + ( depth_point * static_cast<float>( z ) );
       // *********************************
       // Y position based on red component of height map data
       point.y = data[(z * height_map.get_width()) + x].y * height_scale;
@@ -58,9 +58,10 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
     for (unsigned int y = 0; y < height_map.get_height() - 1; ++y) {
       // Get four corners of patch
       unsigned int top_left = (y * height_map.get_width()) + x;
-      unsigned int top_right = (y * height_map.get_width()) + x + 1;
+			unsigned int top_right = ( y * height_map.get_height ( ) ) + x + 1;
       // *********************************
-
+			unsigned int bottom_left = ( ( y + 1 ) * height_map.get_width ( ) ) + x;
+			unsigned int bottom_right = ( ( y + 1 ) * height_map.get_height( ) ) + x + 1;
 
       // *********************************
       // Push back indices for triangle 1 (tl,br,bl)
@@ -69,9 +70,9 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
       indices.push_back(bottom_left);
       // Push back indices for triangle 2 (tl,tr,br)
       // *********************************
-
-
-
+			indices.push_back ( top_left );
+			indices.push_back ( top_right );
+			indices.push_back ( bottom_right );
       // *********************************
     }
   }
@@ -92,19 +93,19 @@ void generate_terrain(geometry &geom, const texture &height_map, unsigned int wi
 
     // Normal is normal(cross product) of these two sides
     // *********************************
-
+		auto n = normalize ( side2 * side1 );
 
     // Add to normals in the normal buffer using the indices for the triangle
-
-
-
+		normals[idx1] = normals[idx1] + n;
+		normals[idx2] = normals[idx2] + n;
+		normals[idx3] = normals[idx3] + n;
     // *********************************
   }
 
   // Normalize all the normals
   for (auto &n : normals) {
     // *********************************
-
+		n = normalize ( n );
     // *********************************
   }
 
