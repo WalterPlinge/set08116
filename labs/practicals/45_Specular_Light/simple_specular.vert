@@ -28,22 +28,22 @@ layout(location = 0) out vec4 vertex_colour;
 void main() {
   // *********************************
   // Calculate position
-
+  gl_Position = MVP * vec4 ( position, 1 );
   // Transform the normal
-
+  vec3 transformed_normal = N * normal;
   // Calculate world position
-
+  vec3 p = M * vec4 ( position, 1 );
   // Calculate view direction
-
+  vec3 d = p - eye_pos;
   // Calculate half vector between view_dir and light_dir
-
+  vec3 h = light_dir - d;
   // Calculate k
-
+  float k = pow ( max ( dot ( transformed_normal, h ), 0 ), shininess );
   // Calculate specular
-
+  vec4 specular = k * light_colour * material_colour;
   // Ensure alpha is 1
-
+  specular.a = 1;
   // Output vertex colour - just diffuse
-
+  vertex_colour = specular;
   // *********************************
 }

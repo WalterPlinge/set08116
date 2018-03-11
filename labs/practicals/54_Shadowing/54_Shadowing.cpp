@@ -16,15 +16,15 @@ shadow_map shadow;
 bool load_content() {
   // *********************************
   // Create shadow map- use screen size
-
+	shadow = shadow_map ( renderer::get_screen_width ( ), renderer::get_screen_height ( ) );
   // Create plane mesh
-
+	meshes["plane"] = mesh ( geometry_builder::create_plane ( ) );
   // Create "teapot" mesh by loading in models/teapot.obj
-
+	meshes["teapot"] = mesh ( geometry ( "models/teapot.obj" ) );
   // Translate Teapot(0,4,0)
-
+	meshes["teapot"].get_transform ( ).translate ( vec3 ( 0, 4, 0 ) );
   // Scale the teapot - (0.1, 0.1, 0.1)
-
+	meshes["teapot"].get_transform ( ).scale = vec3 ( 0.1 );
   // *********************************
 
   // Load texture
@@ -98,9 +98,9 @@ bool update(float delta_time) {
 
   // *********************************
   // Update the shadow map light_position from the spot light
-
+	shadow.light_position = spot.get_position ( );
   // do the same for light_dir property
-
+	shadow.light_dir = spot.get_direction ( );
   // *********************************
 
   // Press s to save
@@ -113,14 +113,14 @@ bool update(float delta_time) {
 bool render() {
   // *********************************
   // Set render target to shadow map
-
+	renderer::set_render_target ( shadow );
   // Clear depth buffer bit
-
+	glClear ( GL_DEPTH_BUFFER_BIT );
   // Set face cull mode to front
-
+	glCullFace ( GL_FRONT );
   // *********************************
 
-  // We could just use the Camera's projection, 
+  // We could just use the Camera's projection,
   // but that has a narrower FoV than the cone of the spot light, so we would get clipping.
   // so we have yo create a new Proj Mat with a field of view of 90.
   mat4 LightProjectionMat = perspective<float>(90.f, renderer::get_screen_aspect(), 0.1f, 1000.f);
@@ -134,7 +134,7 @@ bool render() {
     auto M = m.get_transform().get_transform_matrix();
     // *********************************
     // View matrix taken from shadow map
-
+		auto V = shadow.get_view ( );
     // *********************************
     auto MVP = LightProjectionMat * V * M;
     // Set MVP matrix uniform
@@ -147,9 +147,9 @@ bool render() {
   }
   // *********************************
   // Set render target back to the screen
-
+	renderer::set_render_target ( );
   // Set face cull mode to back
-
+	glCullFace ( GL_BACK );
   // *********************************
 
   // Bind shader
@@ -175,7 +175,7 @@ bool render() {
                        value_ptr(m.get_transform().get_normal_matrix()));
     // *********************************
     // Set lightMVP uniform, using:
-     //Model matrix from m
+    //Model matrix from m
 
     // viewmatrix from the shadow map
 
